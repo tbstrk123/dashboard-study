@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
   Clock,
   Filter,
+  Info,
   Play,
   Search,
   Server,
@@ -225,32 +226,53 @@ const tasks: Task[] = [
   },
 ];
 
-const questionnaireItems: QuestionnaireItem[] = [
+const nasaTlxItems: QuestionnaireItem[] = [
   [
-    "mentalDemand",
+    "nasaMentalDemand",
     "Wie mental anspruchsvoll war die Bearbeitung der Aufgaben mit diesem Dashboard?",
     "1 = sehr gering, 7 = sehr hoch",
   ],
   [
-    "temporalDemand",
+    "nasaPhysicalDemand",
+    "Wie körperlich anstrengend war die Bearbeitung der Aufgaben mit diesem Dashboard?",
+    "1 = sehr gering, 7 = sehr hoch",
+  ],
+  [
+    "nasaTemporalDemand",
     "Wie stark hast du dich während der Bearbeitung unter Zeitdruck gesetzt gefühlt?",
     "1 = gar nicht, 7 = sehr stark",
   ],
   [
-    "effort",
-    "Wie viel Anstrengung war notwendig, um die kritischen Zustände im Dashboard zu erkennen?",
-    "1 = sehr wenig, 7 = sehr viel",
-  ],
-  [
-    "performance",
+    "nasaPerformance",
     "Wie erfolgreich warst du deiner Einschätzung nach bei der Bearbeitung der Aufgaben?",
     "1 = gar nicht erfolgreich, 7 = sehr erfolgreich",
   ],
   [
-    "frustration",
+    "nasaEffort",
+    "Wie viel Anstrengung war notwendig, um die Aufgaben mit diesem Dashboard zu bearbeiten?",
+    "1 = sehr wenig, 7 = sehr viel",
+  ],
+  [
+    "nasaFrustration",
     "Wie frustriert warst du während der Bearbeitung der Aufgaben mit diesem Dashboard?",
     "1 = gar nicht frustriert, 7 = sehr frustriert",
   ],
+];
+
+const susItems: QuestionnaireItem[] = [
+  ["sus1", "Ich denke, dass ich dieses Dashboard häufig nutzen würde.", "1 = stimme überhaupt nicht zu, 5 = stimme voll zu"],
+  ["sus2", "Ich fand das Dashboard unnötig komplex.", "1 = stimme überhaupt nicht zu, 5 = stimme voll zu"],
+  ["sus3", "Ich fand das Dashboard einfach zu benutzen.", "1 = stimme überhaupt nicht zu, 5 = stimme voll zu"],
+  ["sus4", "Ich glaube, ich würde technische Unterstützung benötigen, um dieses Dashboard nutzen zu können.", "1 = stimme überhaupt nicht zu, 5 = stimme voll zu"],
+  ["sus5", "Ich fand, dass die verschiedenen Bestandteile des Dashboards gut integriert waren.", "1 = stimme überhaupt nicht zu, 5 = stimme voll zu"],
+  ["sus6", "Ich fand, dass es im Dashboard zu viele Inkonsistenzen gab.", "1 = stimme überhaupt nicht zu, 5 = stimme voll zu"],
+  ["sus7", "Ich kann mir vorstellen, dass die meisten Personen den Umgang mit diesem Dashboard schnell lernen würden.", "1 = stimme überhaupt nicht zu, 5 = stimme voll zu"],
+  ["sus8", "Ich fand die Nutzung des Dashboards umständlich.", "1 = stimme überhaupt nicht zu, 5 = stimme voll zu"],
+  ["sus9", "Ich fühlte mich sicher im Umgang mit diesem Dashboard.", "1 = stimme überhaupt nicht zu, 5 = stimme voll zu"],
+  ["sus10", "Ich musste viele Dinge lernen, bevor ich mit diesem Dashboard arbeiten konnte.", "1 = stimme überhaupt nicht zu, 5 = stimme voll zu"],
+];
+
+const dashboardSpecificItems: QuestionnaireItem[] = [
   [
     "visualOverload",
     "Das Dashboard wirkte visuell überladen.",
@@ -259,11 +281,6 @@ const questionnaireItems: QuestionnaireItem[] = [
   [
     "easeDetection",
     "Kritische Zustände waren im Dashboard leicht zu erkennen.",
-    "1 = stimme überhaupt nicht zu, 7 = stimme voll zu",
-  ],
-  [
-    "confidence",
-    "Ich bin mir sicher, dass ich die wichtigsten kritischen Zustände korrekt identifiziert habe.",
     "1 = stimme überhaupt nicht zu, 7 = stimme voll zu",
   ],
   [
@@ -387,7 +404,7 @@ function Dashboard({
             className={`min-h-[82px] rounded-xl border p-3 text-left ${statusClasses(
               status,
               highlighted,
-              isSelected(label),
+              isClickable("kpi") && isSelected(label),
               isClickable("kpi")
             )}`}
           >
@@ -435,7 +452,7 @@ function Dashboard({
                   const status = s[6];
                   const name = s[0];
                   const clickable = isClickable("service");
-                  const selected = isSelected(name);
+                  const selected = clickable && isSelected(name);
 
                   return (
                     <tr
@@ -477,7 +494,7 @@ function Dashboard({
             <div className="space-y-2">
               {dataset.history.map(([name, states]) => {
                 const clickable = isClickable("history");
-                const selected = isSelected(name);
+                const selected = clickable && isSelected(name);
 
                 return (
                   <button
@@ -522,7 +539,7 @@ function Dashboard({
             <div className="space-y-2">
               {dataset.slaRisks.map(([name, budget, risk, status]) => {
                 const clickable = isClickable("sla");
-                const selected = isSelected(name);
+                const selected = clickable && isSelected(name);
                 const budgetValue = parseInt(budget, 10);
 
                 return (
@@ -589,7 +606,7 @@ function Dashboard({
             <div className="space-y-2">
               {dataset.throughput.map(([name, input, output, gap, status]) => {
                 const clickable = isClickable("throughput");
-                const selected = isSelected(name);
+                const selected = clickable && isSelected(name);
                 const max = 1400;
 
                 return (
@@ -643,13 +660,15 @@ function Dashboard({
 function Scale({
   value,
   onChange,
+  max = 7,
 }: {
   value: number | undefined;
   onChange: (value: number) => void;
+  max?: number;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+      {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
         <button
           type="button"
           key={n}
@@ -697,6 +716,8 @@ export default function DashboardStudyApp() {
   const [qualitativeFeedback, setQualitativeFeedback] = useState("");
   const [dashboardExperience, setDashboardExperience] = useState("");
   const [visualizationExperience, setVisualizationExperience] = useState("");
+  const [ageGroup, setAgeGroup] = useState("");
+  const [colorVision, setColorVision] = useState("");
 
   const runs = useMemo(() => {
     const second: Condition = order === "baseline" ? "highlight" : "baseline";
@@ -771,12 +792,28 @@ export default function DashboardStudyApp() {
   }
 
   async function saveQuestionnaire() {
-    const cognitiveLoad =
-      ((questionnaire.mentalDemand || 0) +
-        (questionnaire.temporalDemand || 0) +
-        (questionnaire.effort || 0) +
-        (questionnaire.frustration || 0)) /
-      4;
+    const nasaPerformanceInverted = 8 - (questionnaire.nasaPerformance || 0);
+    const rawNasaTlx =
+      ((questionnaire.nasaMentalDemand || 0) +
+        (questionnaire.nasaPhysicalDemand || 0) +
+        (questionnaire.nasaTemporalDemand || 0) +
+        nasaPerformanceInverted +
+        (questionnaire.nasaEffort || 0) +
+        (questionnaire.nasaFrustration || 0)) /
+      6;
+
+    const susScore =
+      (((questionnaire.sus1 || 0) - 1) +
+        (5 - (questionnaire.sus2 || 0)) +
+        ((questionnaire.sus3 || 0) - 1) +
+        (5 - (questionnaire.sus4 || 0)) +
+        ((questionnaire.sus5 || 0) - 1) +
+        (5 - (questionnaire.sus6 || 0)) +
+        ((questionnaire.sus7 || 0) - 1) +
+        (5 - (questionnaire.sus8 || 0)) +
+        ((questionnaire.sus9 || 0) - 1) +
+        (5 - (questionnaire.sus10 || 0))) *
+      2.5;
 
     const questionnaireRow: ResultRow = {
       participantId,
@@ -785,7 +822,9 @@ export default function DashboardStudyApp() {
       dataset: activeRun.datasetKey,
       recordType: "questionnaire",
       ...questionnaire,
-      cognitiveLoad,
+      nasaPerformanceInverted,
+      rawNasaTlx,
+      susScore,
     };
 
     const updatedResults = [...results, questionnaireRow];
@@ -807,6 +846,8 @@ export default function DashboardStudyApp() {
         recordType: "backgroundAndFeedback",
         dashboardExperience,
         visualizationExperience,
+        ageGroup,
+        colorVision,
         feedback: qualitativeFeedback,
       },
     ];
@@ -855,9 +896,15 @@ export default function DashboardStudyApp() {
     setQualitativeFeedback("");
     setDashboardExperience("");
     setVisualizationExperience("");
+    setAgeGroup("");
+    setColorVision("");
   }
 
-  const allQuestionnaireAnswered = questionnaireItems.every(([key]) => questionnaire[key]);
+  const allQuestionnaireAnswered = [
+    ...nasaTlxItems,
+    ...susItems,
+    ...dashboardSpecificItems,
+  ].every(([key]) => questionnaire[key]);
 
   if (stage === "intro") {
     return (
@@ -999,19 +1046,60 @@ export default function DashboardStudyApp() {
           <Card className="rounded-3xl">
             <CardContent className="p-8">
               <h1 className="text-2xl font-bold">Fragebogen nach Durchlauf {runIndex + 1}</h1>
-              <p className="mt-2 text-slate-600">Bitte bewerte die folgenden Fragen auf einer Skala von 1 bis 7.</p>
+              <p className="mt-2 text-slate-600">Bitte beantworte die folgenden Fragen zu dem gerade bearbeiteten Dashboard.</p>
 
-              <div className="mt-6 space-y-5">
-                {questionnaireItems.map(([key, label, hint]) => (
-                  <div key={key} className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="font-semibold">{label}</p>
-                    <p className="mb-3 mt-1 text-sm text-slate-500">{hint}</p>
-                    <Scale
-                      value={questionnaire[key]}
-                      onChange={(v) => setQuestionnaire((prev) => ({ ...prev, [key]: v }))}
-                    />
+              <div className="mt-6 space-y-8">
+                <section>
+                  <h2 className="text-lg font-bold">Raw NASA-TLX</h2>
+                  <p className="mt-1 text-sm text-slate-500">Skala: 1 bis 7</p>
+                  <div className="mt-3 space-y-5">
+                    {nasaTlxItems.map(([key, label, hint]) => (
+                      <div key={key} className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="font-semibold">{label}</p>
+                        <p className="mb-3 mt-1 text-sm text-slate-500">{hint}</p>
+                        <Scale
+                          value={questionnaire[key]}
+                          onChange={(v) => setQuestionnaire((prev) => ({ ...prev, [key]: v }))}
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </section>
+
+                <section>
+                  <h2 className="text-lg font-bold">System Usability Scale (SUS)</h2>
+                  <p className="mt-1 text-sm text-slate-500">Skala: 1 = stimme überhaupt nicht zu, 5 = stimme voll zu</p>
+                  <div className="mt-3 space-y-5">
+                    {susItems.map(([key, label, hint]) => (
+                      <div key={key} className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="font-semibold">{label}</p>
+                        <p className="mb-3 mt-1 text-sm text-slate-500">{hint}</p>
+                        <Scale
+                          max={5}
+                          value={questionnaire[key]}
+                          onChange={(v) => setQuestionnaire((prev) => ({ ...prev, [key]: v }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section>
+                  <h2 className="text-lg font-bold">Dashboard-spezifische Fragen</h2>
+                  <p className="mt-1 text-sm text-slate-500">Skala: 1 bis 7</p>
+                  <div className="mt-3 space-y-5">
+                    {dashboardSpecificItems.map(([key, label, hint]) => (
+                      <div key={key} className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="font-semibold">{label}</p>
+                        <p className="mb-3 mt-1 text-sm text-slate-500">{hint}</p>
+                        <Scale
+                          value={questionnaire[key]}
+                          onChange={(v) => setQuestionnaire((prev) => ({ ...prev, [key]: v }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
               </div>
 
               <Button
@@ -1089,6 +1177,38 @@ export default function DashboardStudyApp() {
                     <option value="5">5 = sehr vertraut</option>
                   </select>
                 </label>
+
+                <label className="text-sm font-semibold">
+                  Altersgruppe
+                  <select
+                    value={ageGroup}
+                    onChange={(e) => setAgeGroup(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2"
+                  >
+                    <option value="">Bitte auswählen</option>
+                    <option value="under18">unter 18</option>
+                    <option value="18-24">18–24</option>
+                    <option value="25-34">25–34</option>
+                    <option value="35-44">35–44</option>
+                    <option value="45plus">45+</option>
+                    <option value="noAnswer">keine Angabe</option>
+                  </select>
+                </label>
+
+                <label className="text-sm font-semibold">
+                  Hast du bekannte Schwierigkeiten bei der Farbwahrnehmung?
+                  <select
+                    value={colorVision}
+                    onChange={(e) => setColorVision(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2"
+                  >
+                    <option value="">Bitte auswählen</option>
+                    <option value="no">Nein</option>
+                    <option value="yes">Ja</option>
+                    <option value="unsure">Unsicher</option>
+                    <option value="noAnswer">keine Angabe</option>
+                  </select>
+                </label>
               </div>
 
               <label className="mt-6 block text-sm font-semibold">
@@ -1103,7 +1223,7 @@ export default function DashboardStudyApp() {
 
               <Button
                 onClick={submitFinalData}
-                disabled={!dashboardExperience || !visualizationExperience}
+                disabled={!dashboardExperience || !visualizationExperience || !ageGroup || !colorVision}
                 className="mt-6 rounded-2xl px-6 py-3"
               >
                 Antwort speichern und Studie abschließen
