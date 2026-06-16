@@ -71,7 +71,7 @@ const datasets: Record<DatasetKey, Dataset> = {
   A: {
     name: "Scenario A",
     priorityRule:
-      "Priorisiere zuerst die höchste Error Rate. Bei gleicher Error Rate entscheidet die höhere P95 Latency.",
+      "Wähle den Service mit der höchsten Error Rate.",
     answers: {
       criticalKpi: ["P95 Latency", "Error Rate", "Open Incidents", "Failed Jobs"],
       priorityService: ["Payment Gateway"],
@@ -125,11 +125,11 @@ const datasets: Record<DatasetKey, Dataset> = {
   B: {
     name: "Scenario B",
     priorityRule:
-      "Priorisiere zuerst die höchste Error Rate. Bei gleicher Error Rate entscheidet die höhere P95 Latency.",
+      "Wähle den Service mit der höchsten Error Rate.",
     answers: {
       criticalKpi: ["P95 Latency", "Error Rate", "Queue Depth", "Open Incidents", "Failed Jobs"],
       priorityService: ["Search Service"],
-      multiMetricServices: ["Search Service", "Recommendation API", "Order Database", "Media Processor"],
+      multiMetricServices: ["Search Service", "Recommendation API", "Order Database"],
       bottleneckStages: ["Processing", "Export"],
       slaRisk: ["Search API"],
       historyComponent: ["Mobile App"],
@@ -188,8 +188,8 @@ const tasks: Task[] = [
   },
   {
     id: "priorityService",
-    title: "Service mit höchster Priorität auswählen",
-    instruction: "Wähle den Service aus, der nach der Prioritätsregel zuerst bearbeitet werden sollte.",
+    title: "Service mit höchster Error Rate auswählen",
+    instruction: "Wähle den Service mit der höchsten Error Rate aus.",
     targetType: "service",
     multi: false,
   },
@@ -992,7 +992,7 @@ export default function DashboardStudyApp() {
     return (
       <div className="min-h-screen bg-white p-5 text-slate-900">
         <div className="mx-auto max-w-[1450px]">
-          <div className="sticky top-0 z-10 mb-4 rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur">
+          <div className="fixed left-5 right-5 top-5 z-10 mx-auto max-w-[1450px] rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-slate-500">
@@ -1026,6 +1026,7 @@ export default function DashboardStudyApp() {
               </div>
             </div>
           </div>
+          <div aria-hidden="true" className="mb-4 min-h-[150px]" />
 
           <Dashboard
             dataset={dataset}
